@@ -22,15 +22,18 @@ jobs:
       - name: Compress compiled files
         run: zip -r release-compile.zip types
 
-      - name: Set current date as env variable
+      - name: Set current date as environment variable
         run: echo "date_now=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+
+      - name: Set generated tag as environment variable
+        run: echo "rand_tag=$(date +'%Y-%m-%d-%H-%m-%S' | md5sum | head -c 15)" >> $GITHUB_ENV
 
       - uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
+          automatic_release_tag: "${{ env.rand_tag }}"
           draft: true
-          title: "Compile ${{ env.date_now }}"
+          title: "Compilation ${{ env.date_now }}"
           files: |
             index.ts
             release-compile.zip

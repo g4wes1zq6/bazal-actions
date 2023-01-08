@@ -1,0 +1,63 @@
+name: Protobuf2TS Build and Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install required dependencies
+        run: npm install --save-dev
+
+      - name: Run the bash script to compile protobuf to TS
+        run: ./generate.sh
+
+      - name: Compress compiled files
+        run: zip -r release-compile.zip types
+
+      - name: Set current date as environment variable
+        run: echo "date_now=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+
+      - name: Set generated tag as environment variable
+        run: echo "rand_tag=$(date +'%Y-%m-%d-%H-%m-%S' | md5sum | head -c 15)" >> $GITHUB_ENV
+
+      - uses: actions/create-release@v1
+        id: get_release
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        with:
+          tag_name: "${{ env.rand_tag }}"
+          release_name: "Release for ${{ env.date_now }}"
+          draft: true
+          prerelease: false
+
+      - uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ./index.ts
+          asset_name: index.ts
+          asset_content_type: application/x-typescript
+
+      - uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ./release-compile.zip
+          asset_name: types.zip
+          asset_content_type: application/zip
+
+      - uses: eregon/publish-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          release_id: ${{ steps.get_release.outputs.id }}
